@@ -1474,11 +1474,12 @@ class Key(object):
             ``version_id`` attribute to None to always grab the latest
             version from a version-enabled bucket.
         """
+        hash_algs = { 'sha256' : hashlib.sha256 }
         self._get_file_internal(fp, headers=headers, cb=cb, num_cb=num_cb,
                                 torrent=torrent, version_id=version_id,
                                 override_num_retries=override_num_retries,
                                 response_headers=response_headers,
-                                hash_algs=None,
+                                hash_algs=hash_algs,
                                 query_args=None)
 
     def _get_file_internal(self, fp, headers=None, cb=None, num_cb=10,
