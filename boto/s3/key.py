@@ -29,7 +29,7 @@ import re
 import base64
 import binascii
 import math
-from hashlib import md5
+from hashlib import md5, sha256
 import boto.utils
 from boto.compat import BytesIO, six, urllib, encodebytes
 
