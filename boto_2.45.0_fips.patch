@@ -1,0 +1,119 @@
+diff --git a/boto/s3/key.py b/boto/s3/key.py
+index b202a44..78caa56 100644
+--- a/boto/s3/key.py
++++ b/boto/s3/key.py
+@@ -29,7 +29,7 @@ import re
+ import base64
+ import binascii
+ import math
+-from hashlib import md5
++from hashlib import md5, sha256
+ import boto.utils
+ from boto.compat import BytesIO, six, urllib, encodebytes
+ 
+@@ -40,7 +40,7 @@ from boto.provider import Provider
+ from boto.s3.keyfile import KeyFile
+ from boto.s3.user import User
+ from boto import UserAgent
+-from boto.utils import compute_md5, compute_hash
++from boto.utils import compute_hash
+ from boto.utils import find_matching_headers
+ from boto.utils import merge_headers_by_name
+ 
+@@ -923,8 +923,8 @@ class Key(object):
+             headers['Content-Type'] = self.content_type
+         else:
+             headers['Content-Type'] = self.content_type
+-        if self.base64md5:
+-            headers['Content-MD5'] = self.base64md5
++        #if self.base64md5:
++        #    headers['Content-MD5'] = self.base64md5
+         if chunked_transfer:
+             headers['Transfer-Encoding'] = 'chunked'
+             #if not self.base64md5:
+@@ -976,11 +976,10 @@ class Key(object):
+             # object.
+             server_side_encryption_customer_algorithm = response.getheader(
+                 'x-amz-server-side-encryption-customer-algorithm', None)
+-            if server_side_encryption_customer_algorithm is None:
+-                if self.etag != '"%s"' % md5:
+-                    raise provider.storage_data_error(
+-                        'ETag from S3 did not match computed MD5. '
+-                        '%s vs. %s' % (self.etag, self.md5))
++            # if server_side_encryption_customer_algorithm is None:
++            #     if self.etag != '"%s"' % md5:
++            #         raise provider.storage_data_error(
++            #             'ETag from S3 did not match computed MD5. '
+ 
+             return True
+ 
+@@ -1004,7 +1003,7 @@ class Key(object):
+ 
+         return False
+ 
+-    def compute_md5(self, fp, size=None):
++    def compute_sha256(self, fp, size=None):
+         """
+         :type fp: file
+         :param fp: File pointer to the file to MD5 hash.  The file
+@@ -1017,9 +1016,9 @@ class Key(object):
+             a file in multiple parts where the file is being split
+             in place into different parts. Less bytes may be available.
+         """
+-        hex_digest, b64_digest, data_size = compute_md5(fp, size=size)
++        hex_digest, b64_digest, data_size = compute_hash(fp, size=size, hash_algorithm=sha256)
+         # Returned values are MD5 hash, base64 encoded MD5 hash, and data size.
+-        # The internal implementation of compute_md5() needs to return the
++        # The internal implementation of compute_hash() needs to return the
+         # data size but we don't want to return that value to the external
+         # caller because it changes the class interface (i.e. it might
+         # break some code) so we consume the third tuple value here and
+@@ -1266,7 +1265,7 @@ class Key(object):
+                 if not md5:
+                     # compute_md5() and also set self.size to actual
+                     # size of the bytes read computing the md5.
+-                    md5 = self.compute_md5(fp, size)
++                    md5 = self.compute_sha256(fp, size)
+                     # adjust size if required
+                     size = self.size
+                 elif size:
+@@ -1474,11 +1473,12 @@ class Key(object):
+             ``version_id`` attribute to None to always grab the latest
+             version from a version-enabled bucket.
+         """
++        hash_algs = { 'sha256' : hashlib.sha256 }
+         self._get_file_internal(fp, headers=headers, cb=cb, num_cb=num_cb,
+                                 torrent=torrent, version_id=version_id,
+                                 override_num_retries=override_num_retries,
+                                 response_headers=response_headers,
+-                                hash_algs=None,
++                                hash_algs=hash_algs,
+                                 query_args=None)
+ 
+     def _get_file_internal(self, fp, headers=None, cb=None, num_cb=10,
+diff --git a/boto/utils.py b/boto/utils.py
+index 39a8cf7..90fe742 100644
+--- a/boto/utils.py
++++ b/boto/utils.py
+@@ -61,7 +61,7 @@ from boto.compat import six, StringIO, urllib, encodebytes
+ 
+ from contextlib import contextmanager
+ 
+-from hashlib import md5, sha512
++from hashlib import md5, sha512, sha256
+ _hashfn = sha512
+ 
+ from boto.compat import json
+diff --git a/setup.py b/setup.py
+index 5879240..8843ac2 100644
+--- a/setup.py
++++ b/setup.py
+@@ -45,7 +45,7 @@ def readme():
+     with open("README.rst") as f:
+         return f.read()
+ 
+-setup(name = "boto",
++setup(name = "python2-boto",
+       version = __version__,
+       description = "Amazon Web Services Library",
+       long_description = readme(),
