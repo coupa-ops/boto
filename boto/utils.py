@@ -61,7 +61,7 @@ from boto.compat import six, StringIO, urllib, encodebytes
 
 from contextlib import contextmanager
 
-from hashlib import md5, sha512
+from hashlib import md5, sha512, sha256
 _hashfn = sha512
 
 from boto.compat import json
